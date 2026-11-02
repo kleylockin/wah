@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>wah</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@400;500&family=Jost:wght@300;400&display=swap" rel="stylesheet">
+<style>
+:root{--bg1:#2a1733;--bg2:#0b0710;--ink:#f7e9ee;--muted:#c9a9b8;--glow:255,190,212;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100%;font-family:'Jost',system-ui,sans-serif;color:var(--ink);overflow-x:hidden;
+  background:radial-gradient(ellipse at 50% 40%,var(--bg1),var(--bg2) 75%);background-color:#0b0710}
+body.off{--bg1:#120d19;--bg2:#050307;--muted:#7d6573}
+main{position:relative;z-index:2;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 16px;text-align:center}
+.stage{position:relative;width:min(520px,94vw);aspect-ratio:400/470}
+.halo{position:absolute;inset:-8% -12% 4%;border-radius:50%;background:radial-gradient(circle,rgba(var(--glow),.5),rgba(var(--glow),.14) 48%,transparent 70%);opacity:0;transition:opacity 1.2s;pointer-events:none}
+body.on .halo{opacity:1;animation:br 4.5s ease-in-out infinite}
+@keyframes br{50%{transform:scale(1.05);opacity:.75}}
+svg{position:relative;width:100%;height:100%;overflow:visible;filter:brightness(.4) saturate(.65);transition:filter 1.2s}
+body.on svg{filter:brightness(1.03) saturate(1.05) drop-shadow(0 0 26px rgba(255,170,200,.35))}
+.bulb{fill:#4a3a44;transition:fill .8s}
+body.on .bulb{fill:#fff3c9;filter:drop-shadow(0 0 4px #ffd98a) drop-shadow(0 0 10px #ffb7cf);animation:tw 2.6s ease-in-out infinite}
+body.on .bulb:nth-of-type(2n){animation-delay:.8s}body.on .bulb:nth-of-type(3n){animation-delay:1.5s}
+@keyframes tw{50%{opacity:.5}}
+.toggle{margin-top:6px;display:inline-flex;align-items:center;gap:14px;padding:13px 26px;border-radius:999px;border:1px solid rgba(255,196,214,.45);
+  background:rgba(255,255,255,.07);backdrop-filter:blur(8px);color:var(--ink);font:400 .95rem 'Jost',sans-serif;letter-spacing:.08em;cursor:pointer;transition:background .4s,transform .2s}
+.toggle:hover{background:rgba(255,255,255,.13)}.toggle:active{transform:scale(.97)}
+.toggle:focus-visible{outline:2px solid #ffc4d6;outline-offset:4px}
+.track{width:42px;height:22px;border-radius:99px;background:#3a2a40;position:relative;transition:background .4s}
+.track::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .4s}
+body.on .track{background:#e98aab}body.on .track::after{transform:translateX(20px)}
+canvas{position:fixed;inset:0;width:100%;height:100%;z-index:3;pointer-events:none}
+.ground{position:fixed;left:0;right:0;bottom:0;height:90px;z-index:1;background:linear-gradient(transparent,rgba(255,255,255,.12));pointer-events:none}
+@media (prefers-reduced-motion:reduce){.halo,.bulb{animation:none!important}}
+</style>
+</head>
+<body class="on">
+<canvas id="snow" aria-hidden="true"></canvas>
+<div class="ground"></div>
+<main>
+  <div class="stage">
+    <div class="halo"></div>
+    <svg id="b" viewBox="0 0 400 470" role="img" aria-label="A bouquet of pink peonies wrapped in paper with a bow and fairy lights"></svg>
+  </div>
+  <button class="toggle" id="t" aria-pressed="true"><span class="track"></span><span id="lbl">Lights on</span></button>
+</main>
+<script>
+const S=document.getElementById('b');let sd=7;const R=()=>(sd=(sd*9301+49297)%233280)/233280;
+let o=`<defs>
+<linearGradient id="g0" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#e46f9a"/><stop offset=".5" stop-color="#f9b4cc"/><stop offset="1" stop-color="#ffe9f0"/></linearGradient>
+<linearGradient id="g1" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#d95a8a"/><stop offset=".5" stop-color="#f6a2c0"/><stop offset="1" stop-color="#ffd8e5"/></linearGradient>
+<linearGradient id="g2" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#cb4679"/><stop offset=".55" stop-color="#ee8db2"/><stop offset="1" stop-color="#fcc5d8"/></linearGradient>
+<linearGradient id="g3" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#bb3569"/><stop offset=".6" stop-color="#e67aa3"/><stop offset="1" stop-color="#f8b3cb"/></linearGradient>
+<linearGradient id="lf" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#2b5c3f"/><stop offset="1" stop-color="#5f9c70"/></linearGradient>
+<linearGradient id="pw" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffaf6"/><stop offset="1" stop-color="#ecd9d6"/></linearGradient>
+<linearGradient id="pp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd9e6"/><stop offset="1" stop-color="#f2a9c2"/></linearGradient>
+<radialGradient id="sh" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#8a2a55" stop-opacity=".55"/><stop offset="1" stop-color="#8a2a55" stop-opacity="0"/></radialGradient>
+</defs>`;
+const leaf=(x,y,a,l)=>{const w=l*.3;return`<g transform="translate(${x} ${y}) rotate(${a})"><path d="M0 0C${-w} ${-l*.2} ${-w*.9} ${-l*.75} 0 ${-l}C${w*.9} ${-l*.75} ${w} ${-l*.2} 0 0Z" fill="url(#lf)" stroke="#244d36" stroke-opacity=".5" stroke-width=".8"/><path d="M0 -4L0 ${-l*.88}" stroke="#a9d3b3" stroke-opacity=".5" stroke-width="1.2" fill="none"/></g>`};
+const petal=(h,g)=>{const w=h*.68;return`<path d="M0 0C${-w} ${-h*.25} ${-w*1.08} ${-h*.9} ${-w*.45} ${-h*.97}Q${-w*.22} ${-h*1.1} 0 ${-h*.94}Q${w*.22} ${-h*1.1} ${w*.45} ${-h*.97}C${w*1.08} ${-h*.9} ${w} ${-h*.25} 0 0Z" fill="url(#${g})" stroke="#b83d6a" stroke-opacity=".3" stroke-width=".7"/>`};
+const peony=(x,y,r,rot=0)=>{const L=[[9,1,0,'g0'],[8,.8,20,'g1'],[7,.58,8,'g2'],[6,.38,32,'g3'],[4,.2,10,'g3']];
+ let s=`<g transform="translate(${x} ${y}) rotate(${rot})"><circle r="${r*1.02}" fill="url(#sh)" opacity=".6"/>`;
+ for(const[n,k,ro,g]of L){const h=r*k;for(let i=0;i<n;i++){const a=360/n*i+ro+(R()-.5)*14;s+=`<g transform="rotate(${a}) scale(${.94+R()*.12})">${petal(h,g)}</g>`}}
+ return s+`<circle r="${r*.07}" fill="#f7c76a" opacity=".9"/></g>`};
+const bud=(x,y,r)=>`<g transform="translate(${x} ${y})"><ellipse rx="${r}" ry="${r*1.1}" fill="url(#g2)" stroke="#b83d6a" stroke-opacity=".35"/><path d="M0 ${r*1.05}C${-r*.9} ${r*.2} ${-r*.6} ${-r*.8} 0 ${-r}C${r*.6} ${-r*.8} ${r*.9} ${r*.2} 0 ${r*1.05}Z" fill="url(#g1)" opacity=".8"/><path d="M${-r} ${r*.5}Q0 ${r*1.6} ${r} ${r*.5}Q0 ${r*.4} ${-r} ${r*.5}Z" fill="#3f7a55"/></g>`;
+// stems
+o+=`<g stroke="#3b7150" stroke-width="6" stroke-linecap="round" fill="none"><path d="M200 330L100 215"/><path d="M200 330L300 215"/><path d="M200 330L200 150"/><path d="M200 330L125 135"/><path d="M200 330L275 135"/></g>`;
+// baby's breath
+for(let i=0;i<30;i++){const a=(R()-.5)*150*Math.PI/180,l=150+R()*70,tx=200+Math.sin(a)*l,ty=310-Math.cos(a)*l;
+ o+=`<path d="M200 310Q${200+Math.sin(a)*l*.4} ${310-Math.cos(a)*l*.6} ${tx} ${ty}" stroke="#7fae8a" stroke-width="1" fill="none"/>`;
+ for(let k=0;k<4;k++)o+=`<circle cx="${tx+(R()-.5)*14}" cy="${ty+(R()-.5)*14}" r="${2+R()*2}" fill="#fff" opacity=".92"/>`}
+// leaves
+[[200,320,-70,150],[200,320,70,150],[200,320,-40,170],[200,320,40,170],[200,320,-100,120],[200,320,100,120],[200,320,-12,150],[200,320,14,150]].forEach(a=>o+=leaf(...a));
+// flowers back to front
+[[85,225,44,10],[315,225,44,-8],[110,135,42,-15],[290,135,42,18],[200,70,38,5]].forEach(f=>o+=peony(...f));
+o+=bud(50,168,13)+bud(350,168,13)+bud(160,48,12)+bud(244,46,12);
+[[150,172,52,12],[250,172,52,-10],[200,138,62,0]].forEach(f=>o+=peony(...f));
+[[132,250,50,-8],[268,250,50,14],[200,246,55,5]].forEach(f=>o+=peony(...f));
+o+=leaf(118,295,-62,70)+leaf(282,295,62,70);
+// paper wrap
+o+=`<path d="M62 262L200 372L338 262L300 320L200 400L100 320Z" fill="url(#pp)" opacity=".0"/>
+<path d="M70 268Q200 338 330 268L252 450Q200 464 148 450Z" fill="url(#pw)" stroke="#d8bfbb" stroke-width="1"/>
+<path d="M70 268L200 345L148 450Q120 400 100 330Z" fill="url(#pp)" opacity=".85"/>
+<path d="M330 268L200 345L252 450Q280 400 300 330Z" fill="#fff" opacity=".55"/>
+<path d="M200 345L200 456" stroke="#d8bfbb" stroke-width="1"/>
+<ellipse cx="200" cy="456" rx="52" ry="7" fill="#000" opacity=".15"/>`;
+// bow
+o+=`<path d="M200 372C150 330 125 370 150 395C170 405 190 390 200 372Z" fill="#d95a8a"/><path d="M200 372C250 330 275 370 250 395C230 405 210 390 200 372Z" fill="#c6497a"/>
+<path d="M196 380L168 432L186 428L198 440Z" fill="#e57fa4"/><path d="M204 380L232 432L214 428L202 440Z" fill="#b83d6a"/>
+<ellipse cx="200" cy="376" rx="12" ry="10" fill="#ea8cb0"/><path d="M158 372Q170 362 184 372" stroke="#fff" stroke-opacity=".5" fill="none"/>`;
+// fairy lights
+const pts=[];let d='';for(let i=0;i<=40;i++){const t=i/40,x=45+310*t,y=110+170*Math.sin(Math.PI*t)*.95+(i%2?4:0);d+=(i?'L':'M')+x.toFixed(1)+' '+y.toFixed(1);if(i%4==2)pts.push([x,y])}
+o+=`<path d="${d}" fill="none" stroke="#5b4452" stroke-width="1.4"/>`;
+pts.forEach(p=>o+=`<rect x="${p[0]-2}" y="${p[1]-1}" width="4" height="5" fill="#5b4452"/><circle class="bulb" cx="${p[0]}" cy="${p[1]+8}" r="5.2"/>`);
+S.innerHTML=o;
+const body=document.body,btn=document.getElementById('t'),lbl=document.getElementById('lbl');
+btn.onclick=()=>{const on=body.classList.toggle('on');body.classList.toggle('off',!on);btn.setAttribute('aria-pressed',on);lbl.textContent=on?'Lights on':'Lights off'};
+const c=document.getElementById('snow'),x=c.getContext('2d');let W,H;const fl=[];
+function rs(){const d=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;c.width=W*d;c.height=H*d;x.setTransform(d,0,0,d,0,0)}
+addEventListener('resize',rs);rs();
+for(let i=0;i<Math.min(150,W/7);i++)fl.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*2.5+.8,s:Math.random()*.9+.35,p:Math.random()*6.28,a:Math.random()*.5+.4});
+let t=0;const still=matchMedia('(prefers-reduced-motion:reduce)').matches;
+(function f(){x.clearRect(0,0,W,H);t+=.01;for(const q of fl){if(!still){q.y+=q.s*(q.r>2?1.3:.8);q.x+=Math.sin(t+q.p)*.4;if(q.y>H+5){q.y=-5;q.x=Math.random()*W}}
+x.beginPath();x.fillStyle=`rgba(255,255,255,${q.a})`;x.shadowColor='rgba(255,255,255,.8)';x.shadowBlur=q.r*2;x.arc(q.x,q.y,q.r,0,6.28);x.fill()}requestAnimationFrame(f)})();
+</script>
+</body>
+</html>
